@@ -10,6 +10,7 @@ Conceptually the idea is to aggregate data and create derived features (using Sp
 https://aws.amazon.com/datasets/4182
 
 ### Team
-Amir Zai
-Rajesh Thallam
-Shelly Stanley
+
+- Amir Zai
+- Rajesh Thallam
+- Shelly Stanley
