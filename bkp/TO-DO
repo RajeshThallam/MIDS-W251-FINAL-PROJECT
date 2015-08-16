@@ -1,0 +1,54 @@
+Overall Idea - "Wiki Trending Articles"
+
+Use hourly wiki page count raw statistics to
+i)   top N trending articles in last 30 days 
+ii)  top N currently trending articles in last 24 hours
+iii) search trends for an article sine Jan'15
+iv)  predicted traffic for last top N trending articles in last 24 hours
+
+Wiki raw count logs ---> Openstack Swift ---> Spark pre-processing and trend calc
+                                                  			|		
+												  			V
+				MySQL (ref data for page redirects)	 +	Apache Hive  	   
+                                                  			|		
+												  			V
+													      HDFS + Swift Output
+                                                   			|		
+												  			V
+													   Elasticsearch
+                                                   			|		
+												  			V
+													      Kibana
+Data Ingestion Historical
+1. Download file to local
+2. Upload file to swift
+
+Data Ingestion Streaming
+3. Check last processed file
+4. Anything missing get it 
+
+Historical Load
+3. Process file through spark - pre-processing and trend calculation
+4. Store output files to HDFS
+5. Ingest file to Hive for cleaning redirects
+6. Store cleaned files into swift
+
+Streaming Hourly Load
+7. Process file through spark - pre-processing and trend calculation
+8. Store output files to HDFS
+9. Ingest file to Hive for cleaning redirects
+10. Merge with historical trends
+11. Store cleaned files into swift
+
+ElasticSearch Index
+12. Load historical/streaming trends to ES index
+
+Prediction for each page
+13. Incremental ML prediction and update index 
+
+Kibana Based Visualization
+14. Three visualizations
+      i.   Last 30 days
+	  ii.  Last 24 hours
+	  iii. Any article
+	  iv.  Predictions for trending articles last 24 hours

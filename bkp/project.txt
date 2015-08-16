@@ -1,0 +1,125 @@
+root/LHM2qt6W
+198.23.88.18
+
+
+
+
+
+curl http://d3kbcqa49mib13.cloudfront.net/spark-1.4.1-bin-hadoop2.6.tgz | tar -zx -C /usr/local --show-transformed --transform='s,/*[^/]*,spark,'
+
+
+from pyspark import SparkContext
+from pyspark.sql import SQLContext
+from datetime import datetime
+
+sc =SparkContext()
+sqlContext = SQLContext(sc)
+
+
+
+#df = sqlContext.textFile('/root/w251/test/pagecounts-20090301-010000')
+#df.show()
+
+lines = sc.textFile("/root/w251/test/pagecounts-20090301-010000")
+rows = lines.map(lambda l: l.split(","))
+stats = rows.map(lambda p: Row(dt= TimestampType(datetime.strptime('200090301 010000', '%Y%m%s %h%M%S')), project=p[0], page=int(p[1]), views=int(p[2])))
+
+# Infer the schema, and register the DataFrame as a table.
+schemaStats = sqlContext.inferSchema(stats)
+schemaStats.registerTempTable("stats")
+
+# SQL can be run over DataFrames that have been registered as a table.
+pageviews = sqlContext.sql("SELECT * FROM stats")
+
+pageviews.show()
+
+
+$SPARK_HOME/bin/spark-submit --executor-memory 3G --class "mids.w251.wiki.WikiPageViewStats" "/root/w251/scala/target/scala-2.10/wikipageviewstats-project_2.10-1.0.jar"
+
+
+git clone https://github.com/alexarchambault/jupyter-scala.git 
+cd jupyter-scala 
+sbt cli/packArchive 
+sbt publishM2 
+# unpack cli/target/jupyter-scala_2.11.6-0.2.0-SNAPSHOT.zip 
+cd cli/target/jupyter-scala_2.11.6-0.2.0-SNAPSHOT/bin 
+./jupyter-scala 
+
+
+SPARK_LOCAL_IP=198.23.88.18 SBT_OPTS=-Xmx2048m ipython notebook --profile "Scala 2.10"
+
+W251 Project Notes
+
+Reference
+http://www.jmlr.org/papers/volume9/li08a/li08a.pdf
+https://github.com/dfdeshom/pydata-slides/blob/master/index.rst
+http://ampcamp.berkeley.edu/4/exercises/data-exploration-using-spark.html
+
+slcli sshkey add -f ~/.ssh/id_rsa.pub --note ‘rt salt layer ssh’ rt-sl-ssh 
+
+slcli vs create -D mids-rt-w251.com -H ‘spark1' -c 2 -m 8192 -o CENTOS_LATEST_64 -d sjc01 --disk 100 -k rt-sl-ssh
+slcli vs create -D mids-rt-w251.com -H ‘spark2' -c 2 -m 8192 -o CENTOS_LATEST_64 -d sjc01 --disk 100 -k rt-sl-ssh
+slcli vs create -D mids-rt-w251.com -H ‘spark3' -c 2 -m 8192 -o CENTOS_LATEST_64 -d sjc01 --disk 100 -k rt-sl-ssh
+
+slcli vs create -D mids-rt-w251.com -H ‘spark4' -c 2 -m 8192 -o CENTOS_LATEST_64 -d sjc01 --disk 100 -k rt-sl-ssh
+
+:..........:..........:..............:..............:............:........:
+:    id    : hostname :  primary_ip  :  backend_ip  : datacenter : action :
+:..........:..........:..............:..............:............:........:
+: 11068351 :  spark1  : 50.97.240.51 : 10.55.119.69 :   sjc01    :   -    :
+: 11068375 :  spark2  : 50.97.240.54 : 10.55.119.89 :   sjc01    :   -    :
+: 11068381 :  spark3  : 198.23.88.19 : 10.90.17.139 :   sjc01    :   -    :
+:..........:..........:..............:..............:............:........:
+
+export PRIVATE_IP1=10.55.119.69
+export PRIVATE_IP2=10.55.119.89
+export PRIVATE_IP3=10.90.17.139
+
+http://d3kbcqa49mib13.cloudfront.net/spark-1.4.1-bin-hadoop2.6.tgz
+
+salt-ssh '*' cmd.run "curl http://d3kbcqa49mib13.cloudfront.net/spark-1.4.1-bin-hadoop2.6.tgz | tar -zx -C /usr/local --show-transformed --transform='s,/*[^/]*,spark,'"
+$SPARK_HOME/bin/spark-submit --class "SimpleApp” —master spark://spark1:7077 $(find . -iname "*.jar”)
+
+curl -s -XPOST 'http://198.23.88.19:9200/_bulk' --data-binary @actresses.json
+
+slcli vs create --datacenter=sjc01 --domain=mids-rt-w251.com --hostname=nutchtest --os=UBUNTU_LATEST_64 --key=rt-sl-ssh --cpu=2 --memory=4096 --billing=hourly --disk=100
+
+$SPARK_HOME/bin/spark-submit --master local[*] /root/wrk/wiki/spark_swift.py
+
+http://spark.apache.org/docs/latest/sql-programming-guide.html
+https://aws.amazon.com/articles/Elastic-MapReduce/4926593393724923
+http://www.jmlr.org/papers/volume9/li08a/li08a.pdf
+https://github.com/datawrangling/trendingtopics/blob/master/lib/python_streaming/daily_trends.py
+https://github.com/dfdeshom/pydata-slides/blob/master/index.rst
+https://github.com/jaley/spark-csv
+
+
+gpfs installation
+
+wget -r --no-check-certificate https://student:da1OwYay8Nc48TJL5t_6FyrC9R@198.23.85.70/gpfs/GPFS_4.1_STD_LSX_QSG.tar.gz
+
+$SPARK_HOME/bin/spark-submit --executor-memory 1G --driver-memory 1G --master local[*] wikipageviewstats.py
+
+
+Getting counts
+
+[hourly statistics]
+date-time
+	project page views bytes
+
+pre-processing
+
+only english projects
+ignore images
+ignore 404, main page, search etc.
+
+pre-procesed file layout - daily file
+	date(yyyymmdd) time(hh24mi) title(str) views(long)
+
+measures to be calculated
+hourly traffic trend
+daily traffic trend
+weekly traffic trend
+monthly traffic trend
+
+https://en.wikipedia.org/wiki/Wikipedia:Naming_conventions_%28technical_restrictions%29

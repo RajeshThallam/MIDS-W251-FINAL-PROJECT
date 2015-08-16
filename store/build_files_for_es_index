@@ -1,0 +1,1 @@
+hadoop fs -cat myfiles/*.csv | hadoop fs -put - myfiles_together.csv
