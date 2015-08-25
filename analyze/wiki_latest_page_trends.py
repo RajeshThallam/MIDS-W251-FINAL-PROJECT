@@ -19,6 +19,8 @@ from pyspark import SparkConf
 
 # import specific libraries
 from snakebite.client import Client
+from datetime import datetime
+from datetime import timedelta
 from util.config import Config
 import swiftclient as swift
 
@@ -53,9 +55,9 @@ else:
   source_files = cfg.get("local", "local_file_pagecounts")
 
 if (out_mode == "hdfs"):
-  target_dir = cfg.get("hdfs", "hdfs_dir_trends")
+  target_dir = cfg.get("hdfs", "hdfs_dir_latest_trends")
 elif (out_mode == "swift"):
-  target_container = cfg.get("swift", "swift_container_trends")
+  target_container = cfg.get("swift", "swift_container_latest_trends")
   target_dir = "swift://" + target_container + "." + swift_region + "/"
 else:
   target_dir = cfg.get("local", "local_dir_trends")
@@ -193,7 +195,7 @@ def calc_trend(page, dates, pageviews):
   monthly_trend_str = '%s|' % ','.join(map(str,monthly_trends))
 
   # pipe '|' is forbidden in wiki titles and would make a good delimiter
-  out_str = page.encode('utf-8').strip() + "|" + date_str + pageview_str + daily_trend_str + weekly_trend_str + monthly_trend_str
+  out_str = page.strip() + "|" + date_str + pageview_str + daily_trend_str + weekly_trend_str + monthly_trend_str
   return out_str
 
 
@@ -206,7 +208,7 @@ sc  = SparkContext(conf = conf)
 # set custom connection
 if (run_mode == "hdfs" or out_mode == "hdfs"):
   # spotify's snakebite as hdfs client
-  hdfs_client = Client(cfg.get("hdfs", "hdfs_master_hostname"), 9000, use_trash=False)
+  hdfs_client = Client("spark1", 9000, use_trash=False)
 
 if (run_mode == "swift" or out_mode == "swift"):
   swiftConf = sc._jsc.hadoopConfiguration()
@@ -232,6 +234,7 @@ if run_mode == "hdfs":
 
 elif run_mode == "swift":  
   # read list of files from swift  src_files = []
+  source_files = '|'.join([ '(pagecounts-' + (datetime.now() - timedelta(hours=i)).strftime("%Y%m%d-%H") + '(.*))' for i in range(48, 71) ])
   src_file_regex = re.compile(source_files)
   for data in swift_client.get_container(source_dir)[1]:
      if src_file_regex.match(data['name']):
@@ -260,7 +263,7 @@ for src_file_name in src_files:
   parts = lines\
     .filter(lambda l: wiki_regex.match(l)) \
     .filter(lambda line: "facebook" in line.lower() ) \
-    .map(lambda l: parse_in_data(l, date)) \
+    .map(lambda l: parse_in_data(l, date + time)) \
     .filter(lambda l: l != None)
 #   .filter(lambda line: "facebook" in line.lower() ) \
 

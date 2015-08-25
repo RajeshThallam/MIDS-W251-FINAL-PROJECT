@@ -9,12 +9,12 @@ from elasticsearch import helpers
 from hashlib import sha1
 from datetime import datetime
 import re
- 
+
 def main():
-    f = open('/root/wrk/wiki/output/out/facebook.txt', 'r')
+    f = open('/root/wrk/wiki/data/es.wiki.page_trends.201501.txt', 'r')
 
     # ignore 400 cause by IndexAlreadyExistsException when creating an index
-    es = Elasticsearch()
+    es = Elasticsearch([{'host': 'spark2', 'port': 9200}])
     es_index_type = "page_trends"
     es_wiki_idx_mapping = {
         'page_trends': {
@@ -31,43 +31,51 @@ def main():
     #es.indices.create(index='wiki', ignore=400)
 
     print datetime.now().strftime("%Y-%m-%d %H:%M") + ": reading"
-    # data in imdb files begin after the line starting with "<listname> LIST
+
     pages = []
     idx = 0
 
     for line in f:
-        page_trends = line.split('!@#')
-        title = page_trends[0]
-    
-        trends = page_trends[1].split('|')
-        idx += 1
-        dates = trends[0].split(',')
-        pageviews = trends[1].split(',')
-        daily_trends = trends[2].split(',')
-        monthly_trends = trends[3].split(',')
+        try:
+            trends = line.split('|')
+            title = trends[0]
         
-        sz_mnth_trends = len(monthly_trends)
-    
-        trends = []
-        for i in range(len(dates)):
-            newpage = {
-                '_index': "wiki",
-                '_type': es_index_type,
-                '_id': sha1(title+dates[i]).hexdigest(),
-                '_source': {
-                    'title': title.decode('latin1'),
-                    'page_date': datetime.strptime(dates[i], '%Y%m%d'),
-                    'page_views': int(pageviews[i]),
-                    'daily_trend': float(daily_trends[i]),
-                    'monthly_trend': float(monthly_trends[i]) if i < sz_mnth_trends else 0.0
-                    }
-            }
-            pages.append(newpage)
-    
-        if ( idx % 1000 == 0 ):
-            print datetime.now().strftime("%Y-%m-%d %H:%M") + ": indexed wiki[" + es_index_type + "] = " + str(idx)
-            helpers.bulk(es, pages, True)
-            pages = []
+            idx += 1
+            dates = trends[1].split(',')
+            pageviews = trends[2].split(',')
+            daily_trends = trends[3].split(',')
+            weekly_trends = trends[4].split(',')
+            monthly_trends = trends[5].split(',')
+            
+            sz_mnth_trends = len(monthly_trends)
+        
+            trends = []
+            for i in range(len(dates)):
+               try:
+                    newpage = {
+                        '_index': "wiki",
+                        '_type': es_index_type,
+                        '_id': sha1(title+dates[i]).hexdigest(),
+                        '_source': {
+                            'title': title.decode('latin1'),
+                            'page_date': datetime.strptime(dates[i], '%Y%m%d'),
+                            'page_views': int(pageviews[i]),
+                            'daily_trend': float(daily_trends[i]),
+                            'monthly_trend': float(monthly_trends[i]) if i < sz_mnth_trends else 0.0
+                            }
+                        }
+                    pages.append(newpage)
+               except Exception, e:
+                    print line
+                    continue
+        
+            if ( idx % 1000 == 0 ):
+                print datetime.now().strftime("%Y-%m-%d %H:%M") + ": indexed wiki[" + es_index_type + "] = " + str(idx)
+                helpers.bulk(es, pages, True)
+                pages = []
+        except Exception, e:
+            print line
+            continue  
 
     print datetime.now().strftime("%Y-%m-%d %H:%M") + ": indexed wiki[" + es_index_type + "] = " + str(idx)
     helpers.bulk(es, pages, True)
